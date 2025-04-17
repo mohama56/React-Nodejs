@@ -1,2 +1,4 @@
 Server/**/*git filter=lfs diff=lfs merge=lfs -text
 add filter=lfs diff=lfs merge=lfs -text
+mongosh-2.5.0-darwin-arm64/bin/mongosh filter=lfs diff=lfs merge=lfs -text
+mongosh-2.5.0-darwin-arm64/bin/mongosh_crypt_v1.dylib filter=lfs diff=lfs merge=lfs -text
