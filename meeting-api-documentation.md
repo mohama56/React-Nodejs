@@ -57,7 +57,7 @@ try {
     }
 }
 ```
-This approach ensures the application continues to function even if dependencies are not in expected locations.
+This approach ensures the application continues to function even if dependencies are not in the expected locations.
 
 #### Efficient MongoDB Queries
 The implementation uses MongoDB's aggregation pipeline for optimal performance:
