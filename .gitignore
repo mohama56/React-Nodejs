@@ -49,4 +49,5 @@ dist/
 build/
 
 # Environment variables
-.env
+.envmongosh-2.5.0-darwin-arm64/bin/mongosh
+mongosh-2.5.0-darwin-arm64/bin/mongosh_crypt_v1.dylib
