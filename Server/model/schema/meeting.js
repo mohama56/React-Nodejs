@@ -1,33 +1,88 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const meetingHistory = new mongoose.Schema({
-    agenda: { type: String, required: true },
-    attendes: [{
+const meetingSchema = new Schema({
+    title: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String
+    },
+    startDate: {
+        type: Date,
+        required: true
+    },
+    endDate: {
+        type: Date,
+        required: true
+    },
+    location: {
+        type: String
+    },
+    meetingType: {
+        type: String,
+        enum: ['in-person', 'virtual', 'phone'],
+        default: 'in-person'
+    },
+    status: {
+        type: String,
+        enum: ['scheduled', 'completed', 'cancelled', 'postponed'],
+        default: 'scheduled'
+    },
+    relatedTo: {
+        type: String,
+        enum: ['contact', 'lead', 'opportunity', 'account'],
+        default: 'contact'
+    },
+    relatedId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Contact',
-    }],
-    attendesLead: [{
+        refPath: 'relatedTo'
+    },
+    participants: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Lead',
+        ref: 'User'
     }],
-    location: String,
-    related: String,
-    dateTime: String,
-    notes: String,
-    // meetingReminders: { type: String, required: true },
+    assignedTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     createBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        require: true,
+        ref: 'User'
     },
-    timestamp: {
+    modifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    notes: {
+        type: String
+    },
+    reminders: [{
+        time: Date,
+        sent: {
+            type: Boolean,
+            default: false
+        }
+    }],
+    deleted: {
+        type: Boolean,
+        default: false
+    },
+    createdAt: {
         type: Date,
         default: Date.now
     },
-    deleted: {
-        type: Boolean,
-        default: false,
-    },
-})
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
 
-module.exports = mongoose.model('Meetings', meetingHistory, 'Meetings');
+// Update timestamp on save
+meetingSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
+});
+
+module.exports = mongoose.model('Meeting', meetingSchema);

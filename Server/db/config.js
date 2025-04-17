@@ -1,105 +1,51 @@
 const mongoose = require('mongoose');
-const User = require('../model/schema/user');
-const bcrypt = require('bcrypt');
-const { initializeLeadSchema } = require("../model/schema/lead");
-const { initializeContactSchema } = require("../model/schema/contact");
-const { initializePropertySchema } = require("../model/schema/property");
-const { createNewModule } = require("../controllers/customField/customField.js");
-const customField = require('../model/schema/customField.js');
-const { contactFields } = require('./contactFields.js');
-const { leadFields } = require('./leadFields.js');
-const { propertiesFields } = require('./propertiesFields.js');
 
-const initializedSchemas = async () => {
-    await initializeLeadSchema();
-    await initializeContactSchema();
-    await initializePropertySchema();
-
-    const CustomFields = await customField.find({ deleted: false });
-    const createDynamicSchemas = async (CustomFields) => {
-        for (const module of CustomFields) {
-            const { moduleName, fields } = module;
-
-            // Check if schema already exists
-            if (!mongoose.models[moduleName]) {
-                // Create schema object
-                const schemaFields = {};
-                for (const field of fields) {
-                    schemaFields[field.name] = { type: field.backendType };
-                }
-                // Create Mongoose schema
-                const moduleSchema = new mongoose.Schema(schemaFields);
-                // Create Mongoose model
-                mongoose.model(moduleName, moduleSchema, moduleName);
-                console.log(`Schema created for module: ${moduleName}`);
-            }
-        }
-    };
-
-    createDynamicSchemas(CustomFields);
-
-}
-
-const connectDB = async (DATABASE_URL, DATABASE) => {
+// Connect to MongoDB with optimized settings
+module.exports = async (url, database) => {
     try {
-        const DB_OPTIONS = {
-            dbName: DATABASE
-        }
+        // Optional: For better performance, set mongoose to use the MongoDB driver's new URL parser
+        mongoose.set('strictQuery', false);
 
-        mongoose.set("strictQuery", false);
-        await mongoose.connect(DATABASE_URL, DB_OPTIONS);
-
-        // const collectionsToDelete = ['abc', 'Report and analytics', 'test', 'krushil', 'bca', 'xyz', 'lkjhg', 'testssssss', 'tel', 'levajav', 'tellevajav', 'Contact'];
-        // const db = mongoose.connection.db;
-        // console.log(db)
-        // for (const collectionName of collectionsToDelete) {
-        //     await db.collection(collectionName).drop();
-        //     console.log(`Collection ${collectionName} deleted successfully.`);
-        // }
-        await initializedSchemas();
-
-        /* this was temporary  */
-        const mockRes = {
-            status: (code) => {
-                return {
-                    json: (data) => { }
-                };
-            },
-            json: (data) => { }
+        // Optimized connection options
+        const connectionOptions = {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            maxPoolSize: 10, // Optimize connection pool size
+            serverSelectionTimeoutMS: 5000, // Shorter server selection timeout
+            socketTimeoutMS: 45000, // How long sockets stay idle before closing
+            family: 4, // Use IPv4, skip trying IPv6
+            connectTimeoutMS: 10000 // Connection timeout
         };
 
-        // Create default modules
-        await createNewModule({ body: { moduleName: 'Leads', fields: leadFields, headings: [], isDefault: true } }, mockRes);
-        await createNewModule({ body: { moduleName: 'Contacts', fields: contactFields, headings: [], isDefault: true } }, mockRes);
-        await createNewModule({ body: { moduleName: 'Properties', fields: propertiesFields, headings: [], isDefault: true } }, mockRes);
-        /*  */
-        await initializedSchemas();
+        // Connect to database
+        await mongoose.connect(`${url}/${database}`, connectionOptions);
 
-        let adminExisting = await User.find({ role: 'superAdmin' });
-        if (adminExisting.length <= 0) {
-            const phoneNumber = 7874263694
-            const firstName = 'Prolink'
-            const lastName = 'Infotech'
-            const username = 'admin@gmail.com'
-            const password = 'admin123'
-            // Hash the password
-            const hashedPassword = await bcrypt.hash(password, 10);
-            // Create a new user
-            const user = new User({ _id: new mongoose.Types.ObjectId('64d33173fd7ff3fa0924a109'), username, password: hashedPassword, firstName, lastName, phoneNumber, role: 'superAdmin' });
-            // Save the user to the database
-            await user.save();
-            console.log("Admin created successfully..");
-        } else if (adminExisting[0].deleted === true) {
-            await User.findByIdAndUpdate(adminExisting[0]._id, { deleted: false });
-            console.log("Admin Update successfully..");
-        } else if (adminExisting[0].username !== "admin@gmail.com") {
-            await User.findByIdAndUpdate(adminExisting[0]._id, { username: 'admin@gmail.com' });
-            console.log("Admin Update successfully..");
-        }
+        console.log(`Connected to MongoDB database: ${database}`);
 
-        console.log("Database Connected Successfully..");
-    } catch (err) {
-        console.log("Database Not connected", err.message);
+        // Set up connection error handling
+        mongoose.connection.on('error', (err) => {
+            console.error('MongoDB connection error:', err);
+        });
+
+        mongoose.connection.on('disconnected', () => {
+            console.log('MongoDB disconnected, attempting to reconnect...');
+        });
+
+        // Graceful connection handling for application termination
+        process.on('SIGINT', async () => {
+            try {
+                await mongoose.connection.close();
+                console.log('MongoDB connection closed due to app termination');
+                process.exit(0);
+            } catch (err) {
+                console.error('Error during MongoDB connection close:', err);
+                process.exit(1);
+            }
+        });
+
+        return mongoose.connection;
+    } catch (error) {
+        console.error('Failed to connect to MongoDB:', error);
+        process.exit(1);
     }
-}
-module.exports = connectDB
+};
