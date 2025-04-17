@@ -36,3 +36,4 @@ node_modules/
 .idea/
 .vscode/
 mongosh-2.5.0-darwin-arm64/
+/Client/.vscode/
